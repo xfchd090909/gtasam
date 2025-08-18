@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>《侠盗猎车手:圣安地列斯》电台播放器</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- 配置Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E63946',
+            secondary: '#6B7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- 自定义工具类和动画 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .btn-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .btn-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .progress-thumb {
+        @apply w-4 h-4 bg-primary rounded-full absolute top-1/2 -translate-y-1/2 shadow-lg cursor-pointer transition-all duration-150 hover:scale-125;
+      }
+      .progress-track {
+        @apply h-1 bg-gray-600 rounded-full relative cursor-pointer;
+      }
+      .progress-fill {
+        @apply h-full bg-primary rounded-full transition-all duration-150;
+      }
+      .player-transition {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .player-blur {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-x-hidden">
+  <!-- 播放器组件 -->
+  <div id="playerContainer" class="fixed top-4 right-4 z-50 player-transition transform scale-0 origin-top-right">
+    <div class="bg-black/90 backdrop-blur-xl rounded-xl p-5 shadow-2xl border border-white/10 w-72 relative">
+      <!-- 关闭按钮 - 提高层级确保可点击 -->
+      <button id="closePlayer" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors z-20 w-6 h-6 flex items-center justify-center">
+        <i class="fa fa-times"></i>
+      </button>
+      
+      <!-- 未播放提示覆盖层 -->
+      <div id="noSongOverlay" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl z-10">
+        <p class="text-gray-300 text-center px-4">快去下方选歌播放吧</p>
+      </div>
+      
+      <!-- 播放器内容 -->
+      <div id="playerContent">
+        <!-- 播放器标题图 -->
+        <div class="w-full h-48 rounded-lg overflow-hidden mb-4">
+          <img id="playerCover" src="https://picsum.photos/seed/radio/400/300" alt="专辑封面" class="w-full h-full object-cover">
+        </div>
+        
+        <!-- 歌曲信息 -->
+        <h3 id="playerSongTitle" class="text-white font-bold text-lg mb-1 text-center">歌曲名称</h3>
+        <p id="playerArtist" class="text-gray-400 text-sm text-center mb-4">歌手名称</p>
+        
+        <!-- 进度条控制区 -->
+        <div class="mb-4">
+          <div class="flex justify-between text-sm text-gray-400 mb-2">
+            <span id="current-time">00:00</span>
+            <span id="total-time">00:00</span>
+          </div>
+          
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            <div id="progress-thumb" class="progress-thumb" style="left: 0%"></div>
+          </div>
+        </div>
+        
+        <!-- 控制按钮 -->
+        <div class="flex justify-center items-center gap-6">
+          <button id="loopButton" class="text-gray-300 hover:text-white transition-colors">
+            <i class="fa fa-repeat text-xl"></i>
+          </button>
+          <button id="playPauseButton" class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary/80 transition-colors">
+            <i class="fa fa-play text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 耳机图标和当前播放信息 -->
+  <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+    <div id="nowPlaying" class="hidden text-gray-400 text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-300">
+      <span id="currentSong">快去下方选歌播放吧</span>
+    </div>
+    <button id="headphoneIcon" class="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-primary/80 transition-colors">
+      <i class="fa fa-headphones"></i>
+    </button>
+  </div>
+  
+  <!-- 音频元素 -->
+  <audio id="audioPlayer" loop></audio>
+  
+  <!-- 提示框 -->
+  <div id="notification" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 opacity-0 transition-opacity duration-300 z-50"></div>
+  
+  <!-- 模糊背景层 -->
+  <div class="fixed inset-0 z-0">
+    <div class="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80"></div>
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- 主要内容 -->
+  <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
+    <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
+      <!-- 标题区域 -->
+      <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2">
+        <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
+          <img src="B.jpg" alt="CSR1039图标" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-col">
+          <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
+            心灵电台103.9
+          </h1>
+          <p class="text-[clamp(1rem,2vw,1.4rem)] text-gray-300 font-medium mt-2">
+            《侠盗猎车手:圣安地列斯》
+          </p>
+        </div>
+      </div>
+      
+      <!-- 电台选择区域 -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
+        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">选择你的音乐</h2>
+        
+        <!-- 电台选择按钮 -->
+        <div class="flex flex-col gap-3 mb-10">
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Ralph Tresvant - Sensitivity
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Bobby Brown - Dont Be Cruel
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Wreckx-N-Effect - New Jack Swing
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Aaron Hall - Dont Be Afraid
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Boyz II Men - Motownphilly
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> SWV - Im so Into You
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Bell Biv DeVoe - Poison
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> En Vogue - My Lovin
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Guy - Groove Me
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Johnny Gill - Rub you the right way
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Soul II Soul Caron Wheeler - Keep On Movin
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Today - I Got The Feeling
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Samuelle - So You Like What You See
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">点击即可播放</span>
+          </div>
+        </div>
+
+        <div class="my-6 flex items-center justify-center">
+          <p class="text-gray-400 text-center">不适合你的语言?</p>
+        </div>
+
+        <!-- 新增语言选择按钮区域 -->
+        <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
+          <a href="#" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 英语
+          </a>
+          <a href="#" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 法语
+          </a>
+          <a href="#" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 俄语
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 页脚 -->
+    <footer class="mt-20 text-gray-400 text-sm opacity-0 translate-y-10 transition-all duration-1000 ease-out" style="transition-delay: 300ms;" id="footer">
+      <p>© 2023 Rockstar Games | 保留所有权利</p>
+    </footer>
+  </div>
+
+  <script>
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', () => {
+      // 元素引用
+      const content = document.getElementById('content');
+      const footer = document.getElementById('footer');
+      const playerContainer = document.getElementById('playerContainer');
+      const headphoneIcon = document.getElementById('headphoneIcon');
+      const nowPlaying = document.getElementById('nowPlaying');
+      const currentSong = document.getElementById('currentSong');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playPauseButton = document.getElementById('playPauseButton');
+      const loopButton = document.getElementById('loopButton');
+      const playerSongTitle = document.getElementById('playerSongTitle');
+      const playerArtist = document.getElementById('playerArtist');
+      const playerCover = document.getElementById('playerCover');
+      const notification = document.getElementById('notification');
+      const progressFill = document.getElementById('progress-fill');
+      const progressThumb = document.getElementById('progress-thumb');
+      const progressTrack = document.querySelector('.progress-track');
+      const currentTimeEl = document.getElementById('current-time');
+      const totalTimeEl = document.getElementById('total-time');
+      const closePlayer = document.getElementById('closePlayer');
+      const noSongOverlay = document.getElementById('noSongOverlay');
+      const playerContent = document.getElementById('playerContent');
+      
+      // 验证关闭按钮是否正确获取
+      console.log('关闭按钮元素:', closePlayer);
+      
+      // 歌曲数据
+      const songs = {
+        'Ralph Tresvant - Sensitivity': {
+          title: 'Sensitivity',
+          artist: 'Ralph Tresvant',
+          file: 'sensitivity.mp3',
+          cover: 'A.jpg'
+        },
+        'Bobby Brown - Dont Be Cruel': {
+          title: 'Dont Be Cruel',
+          artist: 'Bobby Brown',
+          file: 'dontbecruel.mp3',
+          cover: 'A.jpg'
+        },
+        'Wreckx-N-Effect - New Jack Swing': {
+          title: 'New Jack Swing',
+          artist: 'Wreckx-N-Effect',
+          file: 'newjackswing.mp3',
+          cover: 'A.jpg'
+        },
+        'Aaron Hall - Dont Be Afraid': {
+          title: 'Don t Be Afraid',
+          artist: 'Aaron Hall',
+          file: 'dontbeafraid.mp3',
+          cover: 'A.jpg'
+        },
+        'Boyz II Men - Motownphilly': {
+          title: 'Motownphilly',
+          artist: 'Boyz II Men',
+          file: 'motownphilly.mp3',
+          cover: 'A.jpg'
+        },
+        'SWV - Im so Into You': {
+          title: 'I m so Into You',
+          artist: 'SWV',
+          file: 'imsointoyou.mp3',
+          cover: 'A.jpg'
+        },
+        'Bell Biv DeVoe - Poison': {
+          title: 'Poison',
+          artist: 'Bell Biv DeVoe',
+          file: 'poison.mp3',
+          cover: 'A.jpg'
+        },
+        'En Vogue - My Lovin': {
+          title: 'My Lovin',
+          artist: 'En Vogue',
+          file: 'mylovin.mp3',
+          cover: 'A.jpg'
+        },
+        'Guy - Groove Me': {
+          title: 'Groove Me',
+          artist: 'Guy',
+          file: 'grooveme.mp3',
+          cover: 'A.jpg'
+        },
+        'Johnny Gill - Rub you the right way': {
+          title: 'Rub you the right way',
+          artist: 'Johnny Gill',
+          file: 'rubyoutherightway.mp3',
+          cover: 'A.jpg'
+        },
+        'Soul II Soul Caron Wheeler - Keep On Movin': {
+          title: 'Keep On Movin',
+          artist: 'Soul II Soul Caron Wheeler',
+          file: 'keeponmovin.mp3',
+          cover: 'A.jpg'
+        },
+        'Today - I Got The Feeling': {
+          title: 'I Got The Feeling',
+          artist: 'Today',
+          file: 'igotthefeeling.mp3',
+          cover: 'A.jpg'
+        },
+        'Samuelle - So You Like What You See': {
+          title: 'So You Like What You See',
+          artist: 'Samuelle',
+          file: 'soyoulikewhatyousee.mp3',
+          cover: 'A.jpg'
+        },
+       };
+      
+      // 状态变量
+      let isPlayerOpen = false;
+      let isPlaying = false;
+      let currentRadio = null;
+      let isDragging = false;
+      
+      // 初始化播放器状态
+      updatePlayerState();
+      
+      // 内容入场动画
+      setTimeout(() => {
+        content.classList.remove('opacity-0', 'translate-y-10');
+      }, 300);
+      
+      setTimeout(() => {
+        footer.classList.remove('opacity-0', 'translate-y-10');
+      }, 600);
+      
+      // 按钮滚动动画
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add('btn-visible');
+            }, index * 80);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      document.querySelectorAll('.btn-animate').forEach(btn => {
+        observer.observe(btn);
+      });
+      
+      // 更新播放器状态（模糊/显示提示）
+      function updatePlayerState() {
+        if (currentRadio) {
+          // 有歌曲播放时
+          noSongOverlay.classList.add('opacity-0');
+          noSongOverlay.classList.remove('opacity-100');
+          playerContent.classList.remove('player-blur');
+          setTimeout(() => {
+            noSongOverlay.classList.add('hidden');
+          }, 300);
+        } else {
+          // 无歌曲播放时
+          noSongOverlay.classList.remove('hidden', 'opacity-0');
+          noSongOverlay.classList.add('opacity-100');
+          playerContent.classList.add('player-blur');
+        }
+      }
+      
+      // 显示通知
+      function showNotification(message) {
+        notification.textContent = message;
+        notification.classList.add('opacity-100');
+        
+        setTimeout(() => {
+          notification.classList.remove('opacity-100');
+        }, 3000);
+      }
+      
+      // 切换播放器显示状态
+      function togglePlayer() {
+        isPlayerOpen = !isPlayerOpen;
+        
+        if (isPlayerOpen) {
+          playerContainer.classList.remove('scale-0');
+          playerContainer.classList.add('scale-100');
+        } else {
+          playerContainer.classList.remove('scale-100');
+          playerContainer.classList.add('scale-0');
+        }
+      }
+      
+      // 格式化时间（秒 -> MM:SS）
+      const formatTime = (seconds) => {
+        if (isNaN(seconds)) return '00:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      
+      // 更新进度条
+      const updateProgress = () => {
+        if (!isDragging && !isNaN(audioPlayer.duration)) {
+          const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+          progressFill.style.width = `${percent}%`;
+          progressThumb.style.left = `${percent}%`;
+          currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+      };
+      
+      // 播放指定电台
+      function playRadio(radioName) {
+        currentRadio = radioName;
+        const song = songs[radioName];
+        
+        // 更新播放器信息
+        playerSongTitle.textContent = song.title;
+        playerArtist.textContent = song.artist;
+        playerCover.src = song.cover;
+        currentSong.textContent = `${song.title} - ${song.artist}`;
+        
+        // 显示当前播放信息
+        nowPlaying.classList.remove('hidden');
+        setTimeout(() => {
+          nowPlaying.classList.add('opacity-100');
+        }, 10);
+        
+        // 尝试加载音频
+        audioPlayer.src = song.file;
+        
+        // 检测音频加载错误
+        audioPlayer.onerror = function() {
+          showNotification('找不到播放文件，请报告站长解决');
+          currentRadio = null;
+          currentSong.textContent = '快去下方选歌播放吧';
+          updatePlayerState();
+        };
+        
+        // 加载音频元数据后更新总时长
+        audioPlayer.addEventListener('loadedmetadata', () => {
+          totalTimeEl.textContent = formatTime(audioPlayer.duration);
+        });
+        
+        // 播放音频
+        audioPlayer.play().then(() => {
+          isPlaying = true;
+          playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          // 更新播放器状态
+          updatePlayerState();
+          // 确保播放器是打开的
+          if (!isPlayerOpen) {
+            togglePlayer();
+          }
+        }).catch(error => {
+          showNotification('找不到播放文件，请报告站长解决');
+          console.error('播放失败:', error);
+          currentRadio = null;
+          updatePlayerState();
+        });
+      }
+      
+      // 切换播放/暂停状态
+      function togglePlayPause() {
+        if (!currentRadio) return;
+        
+        if (isPlaying) {
+          audioPlayer.pause();
+          playPauseButton.innerHTML = '<i class="fa fa-play text-xl"></i>';
+        } else {
+          audioPlayer.play().then(() => {
+            playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          }).catch(error => {
+            showNotification('播放失败，请重试');
+            console.error('播放失败:', error);
+          });
+        }
+        isPlaying = !isPlaying;
+      }
+      
+      // 切换循环状态
+      function toggleLoop() {
+        audioPlayer.loop = !audioPlayer.loop;
+        loopButton.classList.toggle('text-primary');
+      }
+      
+      // 进度条点击跳转
+      progressTrack.addEventListener('click', (e) => {
+        if (!currentRadio) return;
+        
+        const rect = progressTrack.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        audioPlayer.currentTime = pos * audioPlayer.duration;
+        updateProgress();
+      });
+      
+      // 拖动进度条
+      progressThumb.addEventListener('mousedown', () => { 
+        if (currentRadio) isDragging = true; 
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && currentRadio) {
+          const rect = progressTrack.getBoundingClientRect();
+          let pos = (e.clientX - rect.left) / rect.width;
+          pos = Math.max(0, Math.min(pos, 1)); // 限制在0-1之间
+          
+          progressFill.style.width = `${pos * 100}%`;
+          progressThumb.style.left = `${pos * 100}%`;
+          currentTimeEl.textContent = formatTime(pos * audioPlayer.duration);
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging && currentRadio) {
+          isDragging = false;
+          const pos = parseFloat(progressFill.style.width) / 100;
+          audioPlayer.currentTime = pos * audioPlayer.duration;
+        }
+      });
+      
+      // 音频时间更新时更新进度条
+      audioPlayer.addEventListener('timeupdate', updateProgress);
+      
+      // 事件监听 - 耳机图标点击
+      headphoneIcon.addEventListener('click', togglePlayer);
+      
+      // 事件监听 - 关闭按钮点击（修复部分：确保事件正确绑定）
+      if (closePlayer) {
+        closePlayer.addEventListener('click', (e) => {
+          e.stopPropagation(); // 防止事件冒泡
+          togglePlayer();
+        });
+      }
+      
+      // 事件监听 - 播放/暂停按钮点击
+      playPauseButton.addEventListener('click', togglePlayPause);
+      
+      // 事件监听 - 循环按钮点击
+      loopButton.addEventListener('click', toggleLoop);
+      
+      // 事件监听 - 电台按钮点击
+      document.querySelectorAll('.station-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const radioName = btn.querySelector('div').textContent.trim().replace(' ', '');
+          playRadio(radioName);
+        });
+      });
+      
+      // 音频结束时自动重播（因为设置了loop属性）
+      audioPlayer.addEventListener('ended', () => {
+        if (audioPlayer.loop) {
+          audioPlayer.play();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
