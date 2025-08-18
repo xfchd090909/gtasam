@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Радиоплеер Grand Theft Auto: San Andreas</title>
+  <!-- Подключение Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Подключение Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Настройка пользовательских цветов и шрифтов Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E63946',
+            secondary: '#6B7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- Пользовательские утилиты и анимации -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .btn-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .btn-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-x-hidden">
+  <!-- Размытый фон -->
+  <div class="fixed inset-0 z-0">
+    <div class="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80"></div>
+    <!-- Декоративные элементы фона -->
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- Основное содержимое -->
+  <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
+    <!-- Контейнер контента - Изначально скрыт, анимация добавляется через JS -->
+    <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
+      <!-- Область заголовка - Горизонтальное расположение -->
+      <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2 hide-scrollbar">
+        <!-- Изображение слева -->
+        <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
+          <img src="A.jpg" alt="Иконка Grand Theft Auto: San Andreas" class="w-full h-full object-cover">
+        </div>
+        
+        <!-- Текст заголовка -->
+        <div class="flex flex-col">
+          <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
+            Радиоплеер Grand Theft Auto: San Andreas
+          </h1>
+          <p class="text-[clamp(1rem,2vw,1.4rem)] text-gray-300 font-medium mt-2">
+            Rockstar North
+          </p>
+        </div>
+      </div>
+      
+      <!-- Центральная область контента -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
+        <!-- Заголовок "Выберите радиостанцию" -->
+        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">Выберите радиостанцию</h2>
+        
+        <!-- Кнопки выбора радиостанции - Вертикальное расположение с анимацией -->
+        <div class="flex flex-col gap-3 mb-10">
+          <a href="mastersounds/mastersounds.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Master Sounds 98.3
+          </a>
+          <a href="kjahradiowest/kjahradiowest.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Radio K-Jah
+          </a>
+          <a href="csr1039/csr1039.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> CSR 103.9
+          </a>
+          <a href="radiox/radiox.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Radio X
+          </a>
+          <a href="radiolossantos/radiolossantos.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Radio Los Santos
+          </a>
+          <a href="sfur/sfur.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> SF-UR
+          </a>
+          <a href="bouncefm/bouncefm.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Bounce FM
+          </a>
+          <a href="kdst/kdst.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> K-DST
+          </a>
+          <a href="krose/krose.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> K-Rose
+          </a>
+          <a href="playback/playback.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center gap-4 text-left border border-white/10">
+            <i class="fa fa-music text-white"></i> Playback FM
+          </a>
+        </div>
+
+        <!-- Разделительный текст -->
+        <div class="my-6 flex items-center justify-center">
+          <p class="text-gray-400 text-center">Не ваш язык?</p>
+        </div>
+        
+        <!-- Кнопки выбора языка - С анимацией -->
+        <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
+          <a href="https://aegtam.netlify.app/indexen.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> English
+          </a>
+          <a href="https://aegtam.netlify.app/indexfr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Français
+          </a>
+          <a href="https://aegtam.netlify.app/index.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 中文
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Подвал -->
+    <footer class="mt-20 text-gray-400 text-sm opacity-0 translate-y-10 transition-all duration-1000 ease-out" style="transition-delay: 300ms;" id="footer">
+      <p>© 2023 Rockstar Games | Все права защищены</p>
+    </footer>
+  </div>
+
+  <!-- JavaScript для управления анимациями -->
+  <script>
+    // Выполняется после загрузки страницы
+    document.addEventListener('DOMContentLoaded', () => {
+      // Анимация появления контента
+      setTimeout(() => {
+        document.getElementById('content').classList.remove('opacity-0', 'translate-y-10');
+      }, 300);
+      
+      setTimeout(() => {
+        document.getElementById('footer').classList.remove('opacity-0', 'translate-y-10');
+      }, 600);
+      
+      // Анимация кнопок
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            // Добавляем возрастающую задержку для каждой кнопки
+            setTimeout(() => {
+              entry.target.classList.add('btn-visible');
+            }, index * 80);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      // Наблюдаем за всеми анимированными кнопками
+      document.querySelectorAll('.btn-animate').forEach(btn => {
+        observer.observe(btn);
+      });
+    });
+  </script>
+</body>
+</html>
