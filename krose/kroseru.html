@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Радиоплеер "Гта: Сан-Андрейас"</title>
+  <!-- Подключение внешних ресурсов -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Конфигурация Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E63946',
+            secondary: '#6B7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- Пользовательские утилиты и анимации -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .btn-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .btn-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .progress-thumb {
+        @apply w-4 h-4 bg-primary rounded-full absolute top-1/2 -translate-y-1/2 shadow-lg cursor-pointer transition-all duration-150 hover:scale-125;
+      }
+      .progress-track {
+        @apply h-1 bg-gray-600 rounded-full relative cursor-pointer;
+      }
+      .progress-fill {
+        @apply h-full bg-primary rounded-full transition-all duration-150;
+      }
+      .player-transition {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .player-blur {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-x-hidden">
+  <!-- Компонент плеера -->
+  <div id="playerContainer" class="fixed top-4 right-4 z-50 player-transition transform scale-0 origin-top-right">
+    <div class="bg-black/90 backdrop-blur-xl rounded-xl p-5 shadow-2xl border border-white/10 w-72 relative">
+      <!-- Кнопка закрытия - повышенный з-index для кликабельности -->
+      <button id="closePlayer" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors z-20 w-6 h-6 flex items-center justify-center">
+        <i class="fa fa-times"></i>
+      </button>
+      
+      <!-- Оверлей с подсказкой при отсутствии воспроизведения -->
+      <div id="noSongOverlay" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl z-10">
+        <p class="text-gray-300 text-center px-4">Выберите песню ниже для воспроизведения</p>
+      </div>
+      
+      <!-- Содержимое плеера -->
+      <div id="playerContent">
+        <!-- Обложка плеера -->
+        <div class="w-full h-48 rounded-lg overflow-hidden mb-4">
+          <img id="playerCover" src="https://picsum.photos/seed/radio/400/300" alt="Обложка альбома" class="w-full h-full object-cover">
+        </div>
+        
+        <!-- Информация о песне -->
+        <h3 id="playerSongTitle" class="text-white font-bold text-lg mb-1 text-center">Название песни</h3>
+        <p id="playerArtist" class="text-gray-400 text-sm text-center mb-4">Имя исполнителя</p>
+        
+        <!-- Контрольная панель прогресс-бара -->
+        <div class="mb-4">
+          <div class="flex justify-between text-sm text-gray-400 mb-2">
+            <span id="current-time">00:00</span>
+            <span id="total-time">00:00</span>
+          </div>
+          
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            <div id="progress-thumb" class="progress-thumb" style="left: 0%"></div>
+          </div>
+        </div>
+        
+        <!-- Контрольные кнопки -->
+        <div class="flex justify-center items-center gap-6">
+          <button id="loopButton" class="text-gray-300 hover:text-white transition-colors">
+            <i class="fa fa-repeat text-xl"></i>
+          </button>
+          <button id="playPauseButton" class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary/80 transition-colors">
+            <i class="fa fa-play text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Иконка наушников и информация о текущем воспроизведении -->
+  <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+    <div id="nowPlaying" class="hidden text-gray-400 text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-300">
+      <span id="currentSong">Выберите песню ниже для воспроизведения</span>
+    </div>
+    <button id="headphoneIcon" class="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-primary/80 transition-colors">
+      <i class="fa fa-headphones"></i>
+    </button>
+  </div>
+  
+  <!-- Аудиоэлемент -->
+  <audio id="audioPlayer" loop></audio>
+  
+  <!-- Уведомление -->
+  <div id="notification" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 opacity-0 transition-opacity duration-300 z-50"></div>
+  
+  <!-- Размытое фоновое изображение -->
+  <div class="fixed inset-0 z-0">
+    <div class="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80"></div>
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- Основное содержимое -->
+  <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
+    <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
+      <!-- Заголовочная область -->
+      <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2">
+        <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
+          <img src="B.jpg" alt="Иконка" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-col">
+          <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
+            K-Rose
+          </h1>
+          <p class="text-[clamp(1rem,2vw,1.4rem)] text-gray-300 font-medium mt-2">
+            "Гта: Сан-Андрейас"
+          </p>
+        </div>
+      </div>
+      
+      <!-- Область выбора радиостанции -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
+        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">Выберите музыку</h2>
+
+        <a href="https://aegtam.netlify.app/indexru.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-home"></i> Главная
+        </a><br>
+        <!-- Кнопки выбора радиостанции -->
+        <div class="flex flex-col gap-3 mb-10">
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Merle Haggard - Always Wanting You
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Eddie Rabbit - I Love A Rainy Night
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Ed Bruce - Mamas Don't Let Your Babies Grow Up To Be Cowboys
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Juice Newton - Queen Of Hearts
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Whitey Shafer - All My Exes Live In Texas
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> The Desert Rose Band - One Step Forward (Two Steps Back)
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> The Statler Brothers - New York City
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> The Statler Brothers - Bed Of Roses
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Mickey Gilley - Make The World Go Away
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Willie Nelson - Crazy
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Asleep At The Wheel - The Letter That Johnny Walker Read
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Patsy Cline - Three Cigarettes in an Ashtray
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Hank Williams - Hey Good Lookin
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Jerry Reed - Amos Moses
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Нажмите для воспроизведения</span>
+          </div>
+        </div>
+
+        <div class="my-6 flex items-center justify-center">
+          <p class="text-gray-400 text-center">Не подходит ваш язык?</p>
+        </div>
+
+        <!-- Новая область кнопок выбора языка -->
+        <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
+          <a href="kroseen.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> English
+          </a>
+          <a href="krosefr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Français
+          </a>
+          <a href="krose.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 中文
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Футер -->
+    <footer class="mt-20 text-gray-400 text-sm opacity-0 translate-y-10 transition-all duration-1000 ease-out" style="transition-delay: 300ms;" id="footer">
+      <p>© 2023 Rockstar Games | Все права защищены</p>
+    </footer>
+  </div>
+
+  <script>
+    // Выполнение после полной загрузки страницы
+    document.addEventListener('DOMContentLoaded', () => {
+      // Ссылки на элементы
+      const content = document.getElementById('content');
+      const footer = document.getElementById('footer');
+      const playerContainer = document.getElementById('playerContainer');
+      const headphoneIcon = document.getElementById('headphoneIcon');
+      const nowPlaying = document.getElementById('nowPlaying');
+      const currentSong = document.getElementById('currentSong');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playPauseButton = document.getElementById('playPauseButton');
+      const loopButton = document.getElementById('loopButton');
+      const playerSongTitle = document.getElementById('playerSongTitle');
+      const playerArtist = document.getElementById('playerArtist');
+      const playerCover = document.getElementById('playerCover');
+      const notification = document.getElementById('notification');
+      const progressFill = document.getElementById('progress-fill');
+      const progressThumb = document.getElementById('progress-thumb');
+      const progressTrack = document.querySelector('.progress-track');
+      const currentTimeEl = document.getElementById('current-time');
+      const totalTimeEl = document.getElementById('total-time');
+      const closePlayer = document.getElementById('closePlayer');
+      const noSongOverlay = document.getElementById('noSongOverlay');
+      const playerContent = document.getElementById('playerContent');
+      
+      // Проверка правильности получения кнопки закрытия
+      console.log('Элемент кнопки закрытия:', closePlayer);
+      
+      // Данные о песнях
+      const songs = {
+        'Merle Haggard - Always Wanting You': {
+          title: 'Always Wanting You',
+          artist: 'Merle Haggard',
+          file: '01-Merle Haggard - Always Wanting You.mp3',
+          cover: 'A.jpg'
+        },
+        'Eddie Rabbit - I Love A Rainy Night': {
+          title: 'I Love A Rainy Night',
+          artist: 'Eddie Rabbit',
+          file: '02-Eddie Rabbit - I Love A Rainy Night.mp3',
+          cover: 'A.jpg'
+        },
+        'Ed Bruce - Mamas Dont Let Your Babies Grow Up To Be Cowboys': {
+          title: 'Mamas Dont Let Your Babies Grow Up To Be Cowboys',
+          artist: 'Ed Bruce',
+          file: '03-Ed Bruce - Mamas Dont Let Your Babies Grow Up To Be Cowboys.mp3',
+          cover: 'A.jpg'
+        },
+        'Juice Newton - Queen Of Hearts': {
+          title: 'Queen Of Hearts',
+          artist: 'Juice Newton',
+          file: '04-Juice Newton - Queen Of Hearts.mp3',
+          cover: 'A.jpg'
+        },
+        'Whitey Shafer - All My Exes Live In Texas': {
+          title: 'All My Exes Live In Texas',
+          artist: 'Whitey Shafer',
+          file: '05-Whitey Shafer - All My Exes Live In Texas.mp3',
+          cover: 'A.jpg'
+        },
+        'The Desert Rose Band - One Step Forward (Two Steps Back)': {
+          title: 'One Step Forward (Two Steps Back)',
+          artist: 'The Desert Rose Band',
+          file: '06-The Desert Rose Band - One Step Forward (Two Steps Back).mp3',
+          cover: 'A.jpg'
+        },
+        'Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man': {
+          title: 'Louisiana Woman, Mississippi Man',
+          artist: 'Conway Twitty & Loretta Lynn',
+          file: '07-Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man.mp3',
+          cover: 'A.jpg'
+        },
+        'The Statler Brothers - New York City': {
+          title: 'New York City',
+          artist: 'The Statler Brothers',
+          file: '08-The Statler Brothers - New York City.mp3',
+          cover: 'A.jpg'
+        },
+        'The Statler Brothers - Bed Of Roses': {
+          title: 'Bed Of Roses',
+          artist: 'The Statler Brothers',
+          file: '09-The Statler Brothers - Bed Of Roses.mp3',
+          cover: 'A.jpg'
+        },
+        'Mickey Gilley - Make The World Go Away': {
+          title: 'Make The World Go Away',
+          artist: 'Mickey Gilley',
+          file: '10-Mickey Gilley - Make The World Go Away.mp3',
+          cover: 'A.jpg'
+        },
+        'Willie Nelson - Crazy': {
+          title: 'Crazy',
+          artist: 'Willie Nelson',
+          file: '11-Willie Nelson - Crazy.mp3',
+          cover: 'A.jpg'
+        },
+        'Asleep At The Wheel - The Letter That Johnny Walker Read': {
+          title: 'The Letter That Johnny Walker Read',
+          artist: 'Asleep At The Wheel',
+          file: '12-Asleep At The Wheel - The Letter That Johnny Walker Read.mp3',
+          cover: 'A.jpg'
+        },
+        'Patsy Cline - Three Cigarettes in an Ashtray': {
+          title: 'Three Cigarettes in an Ashtray',
+          artist: 'Patsy Cline',
+          file: '13-Patsy Cline - Three Cigarettes in an Ashtray.mp3',
+          cover: 'A.jpg'
+        },
+        'Hank Williams - Hey Good Lookin': {
+          title: 'Hey Good Lookin'',
+          artist: 'Hank Williams',
+          file: '14-Hank Williams - Hey Good Lookin.mp3',
+          cover: 'A.jpg'
+        },
+        'Jerry Reed - Amos Moses': {
+          title: 'Amos Moses',
+          artist: 'Jerry Reed',
+          file: '15-Jerry Reed - Amos Moses.mp3',
+          cover: 'A.jpg'
+        },
+       };
+      
+      // Состояние приложения
+      let isPlayerOpen = false;
+      let isPlaying = false;
+      let currentRadio = null;
+      let isDragging = false;
+      
+      // Инициализация состояния плеера
+      updatePlayerState();
+      
+      // Анимация появления контента
+      setTimeout(() => {
+        content.classList.remove('opacity-0', 'translate-y-10');
+      }, 300);
+      
+      setTimeout(() => {
+        footer.classList.remove('opacity-0', 'translate-y-10');
+      }, 600);
+      
+      // Анимация кнопок при прокрутке
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add('btn-visible');
+            }, index * 80);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      document.querySelectorAll('.btn-animate').forEach(btn => {
+        observer.observe(btn);
+      });
+      
+      // Обновление состояния плеера (размытие/отображение подсказки)
+      function updatePlayerState() {
+        if (currentRadio) {
+          // При воспроизведении песни
+          noSongOverlay.classList.add('opacity-0');
+          noSongOverlay.classList.remove('opacity-100');
+          playerContent.classList.remove('player-blur');
+          setTimeout(() => {
+            noSongOverlay.classList.add('hidden');
+          }, 300);
+        } else {
+          // При отсутствии воспроизведения
+          noSongOverlay.classList.remove('hidden', 'opacity-0');
+          noSongOverlay.classList.add('opacity-100');
+          playerContent.classList.add('player-blur');
+        }
+      }
+      
+      // Отображение уведомления
+      function showNotification(message) {
+        notification.textContent = message;
+        notification.classList.add('opacity-100');
+        
+        setTimeout(() => {
+          notification.classList.remove('opacity-100');
+        }, 3000);
+      }
+      
+      // Переключение отображения плеера
+      function togglePlayer() {
+        isPlayerOpen = !isPlayerOpen;
+        
+        if (isPlayerOpen) {
+          playerContainer.classList.remove('scale-0');
+          playerContainer.classList.add('scale-100');
+        } else {
+          playerContainer.classList.remove('scale-100');
+          playerContainer.classList.add('scale-0');
+        }
+      }
+      
+      // Форматирование времени (секунды -> ММ:СС)
+      const formatTime = (seconds) => {
+        if (isNaN(seconds)) return '00:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      
+      // Обновление прогресс-бара
+      const updateProgress = () => {
+        if (!isDragging && !isNaN(audioPlayer.duration)) {
+          const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+          progressFill.style.width = `${percent}%`;
+          progressThumb.style.left = `${percent}%`;
+          currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+      };
+      
+      // Воспроизведение выбранной радиостанции
+      function playRadio(radioName) {
+        currentRadio = radioName;
+        const song = songs[radioName];
+        
+        // Обновление информации в плеере
+        playerSongTitle.textContent = song.title;
+        playerArtist.textContent = song.artist;
+        playerCover.src = song.cover;
+        currentSong.textContent = `${song.title} - ${song.artist}`;
+        
+        // Отображение информации о текущем воспроизведении
+        nowPlaying.classList.remove('hidden');
+        setTimeout(() => {
+          nowPlaying.classList.add('opacity-100');
+        }, 10);
+        
+        // Попытка загрузки аудио
+        audioPlayer.src = song.file;
+        
+        // Обработка ошибок загрузки аудио
+        audioPlayer.onerror = function() {
+          showNotification('Файл не найден, сообщите администратору');
+          currentRadio = null;
+          currentSong.textContent = 'Выберите песню ниже для воспроизведения';
+          updatePlayerState();
+        };
+        
+        // Обновление общей длительности после загрузки метаданных
+        audioPlayer.addEventListener('loadedmetadata', () => {
+          totalTimeEl.textContent = formatTime(audioPlayer.duration);
+        });
+        
+        // Воспроизведение аудио
+        audioPlayer.play().then(() => {
+          isPlaying = true;
+          playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          // Обновление состояния плеера
+          updatePlayerState();
+          // Обеспечение открытия плеера
+          if (!isPlayerOpen) {
+            togglePlayer();
+          }
+        }).catch(error => {
+          showNotification('Ошибка воспроизведения, попробуйте снова');
+          console.error('Ошибка воспроизведения:', error);
+          currentRadio = null;
+          updatePlayerState();
+        });
+      }
+      
+      // Переключение состояния воспроизведения/паузы
+      function togglePlayPause() {
+        if (!currentRadio) return;
+        
+        if (isPlaying) {
+          audioPlayer.pause();
+          playPauseButton.innerHTML = '<i class="fa fa-play text-xl"></i>';
+        } else {
+          audioPlayer.play().then(() => {
+            playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          }).catch(error => {
+            showNotification('Ошибка воспроизведения, попробуйте снова');
+            console.error('Ошибка воспроизведения:', error);
+          });
+        }
+        isPlaying = !isPlaying;
+      }
+      
+      // Переключение состояния повтора
+      function toggleLoop() {
+        audioPlayer.loop = !audioPlayer.loop;
+        loopButton.classList.toggle('text-primary');
+      }
+      
+      // Переход по клику на прогресс-бар
+      progressTrack.addEventListener('click', (e) => {
+        if (!currentRadio) return;
+        
+        const rect = progressTrack.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        audioPlayer.currentTime = pos * audioPlayer.duration;
+        updateProgress();
+      });
+      
+      // Перетаскивание ползунка прогресс-бара
+      progressThumb.addEventListener('mousedown', () => { 
+        if (currentRadio) isDragging = true; 
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && currentRadio) {
+          const rect = progressTrack.getBoundingClientRect();
+          let pos = (e.clientX - rect.left) / rect.width;
+          pos = Math.max(0, Math.min(pos, 1)); // Ограничение в диапазоне 0-1
+          
+          progressFill.style.width = `${pos * 100}%`;
+          progressThumb.style.left = `${pos * 100}%`;
+          currentTimeEl.textContent = formatTime(pos * audioPlayer.duration);
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging && currentRadio) {
+          isDragging = false;
+          const pos = parseFloat(progressFill.style.width) / 100;
+          audioPlayer.currentTime = pos * audioPlayer.duration;
+        }
+      });
+      
+      // Обновление прогресс-бара при изменении времени воспроизведения
+      audioPlayer.addEventListener('timeupdate', updateProgress);
+      
+      // Слушатель события - клик по иконке наушников
+      headphoneIcon.addEventListener('click', togglePlayer);
+      
+      // Слушатель события - клик по кнопке закрытия (исправление: гарантия правильной привязки)
+      if (closePlayer) {
+        closePlayer.addEventListener('click', (e) => {
+          e.stopPropagation(); // Предотвращение всплытия события
+          togglePlayer();
+        });
+      }
+      
+      // Слушатель события - клик по кнопке воспроизведения/паузы
+      playPauseButton.addEventListener('click', togglePlayPause);
+      
+      // Слушатель события - клик по кнопке повтора
+      loopButton.addEventListener('click', toggleLoop);
+      
+      // Слушатель события - клик по кнопкам радиостанций
+      document.querySelectorAll('.station-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const radioName = btn.querySelector('div').textContent.trim().replace(' ', '');
+          playRadio(radioName);
+        });
+      });
+      
+      // Автоматическое перепроигрывание при окончании аудио (из-за атрибута loop)
+      audioPlayer.addEventListener('ended', () => {
+        if (audioPlayer.loop) {
+          audioPlayer.play();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
