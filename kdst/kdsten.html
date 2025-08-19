@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grand Theft Auto: San Andreas Radio Player</title>
+  <!-- External resources -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Tailwind configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E63946',
+            secondary: '#6B7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- Custom utilities and animations -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .btn-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .btn-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .progress-thumb {
+        @apply w-4 h-4 bg-primary rounded-full absolute top-1/2 -translate-y-1/2 shadow-lg cursor-pointer transition-all duration-150 hover:scale-125;
+      }
+      .progress-track {
+        @apply h-1 bg-gray-600 rounded-full relative cursor-pointer;
+      }
+      .progress-fill {
+        @apply h-full bg-primary rounded-full transition-all duration-150;
+      }
+      .player-transition {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .player-blur {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-x-hidden">
+  <!-- Player component -->
+  <div id="playerContainer" class="fixed top-4 right-4 z-50 player-transition transform scale-0 origin-top-right">
+    <div class="bg-black/90 backdrop-blur-xl rounded-xl p-5 shadow-2xl border border-white/10 w-72 relative">
+      <!-- Close button - higher z-index to ensure clickability -->
+      <button id="closePlayer" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors z-20 w-6 h-6 flex items-center justify-center">
+        <i class="fa fa-times"></i>
+      </button>
+      
+      <!-- No song playing overlay -->
+      <div id="noSongOverlay" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl z-10">
+        <p class="text-gray-300 text-center px-4">Choose a song below to play</p>
+      </div>
+      
+      <!-- Player content -->
+      <div id="playerContent">
+        <!-- Player cover art -->
+        <div class="w-full h-48 rounded-lg overflow-hidden mb-4">
+          <img id="playerCover" src="https://picsum.photos/seed/radio/400/300" alt="Album cover" class="w-full h-full object-cover">
+        </div>
+        
+        <!-- Song information -->
+        <h3 id="playerSongTitle" class="text-white font-bold text-lg mb-1 text-center">Song Title</h3>
+        <p id="playerArtist" class="text-gray-400 text-sm text-center mb-4">Artist Name</p>
+        
+        <!-- Progress bar controls -->
+        <div class="mb-4">
+          <div class="flex justify-between text-sm text-gray-400 mb-2">
+            <span id="current-time">00:00</span>
+            <span id="total-time">00:00</span>
+          </div>
+          
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            <div id="progress-thumb" class="progress-thumb" style="left: 0%"></div>
+          </div>
+        </div>
+        
+        <!-- Control buttons -->
+        <div class="flex justify-center items-center gap-6">
+          <button id="loopButton" class="text-gray-300 hover:text-white transition-colors">
+            <i class="fa fa-repeat text-xl"></i>
+          </button>
+          <button id="playPauseButton" class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary/80 transition-colors">
+            <i class="fa fa-play text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Headphones icon and now playing info -->
+  <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+    <div id="nowPlaying" class="hidden text-gray-400 text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-300">
+      <span id="currentSong">Choose a song below to play</span>
+    </div>
+    <button id="headphoneIcon" class="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-primary/80 transition-colors">
+      <i class="fa fa-headphones"></i>
+    </button>
+  </div>
+  
+  <!-- Audio element -->
+  <audio id="audioPlayer" loop></audio>
+  
+  <!-- Notification box -->
+  <div id="notification" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 opacity-0 transition-opacity duration-300 z-50"></div>
+  
+  <!-- Blurred background layers -->
+  <div class="fixed inset-0 z-0">
+    <div class="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80"></div>
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- Main content -->
+  <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
+    <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
+      <!-- Title area -->
+      <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2">
+        <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
+          <img src="B.jpg" alt="Icon" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-col">
+          <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
+            K-DST
+          </h1>
+          <p class="text-[clamp(1rem,2vw,1.4rem)] text-gray-300 font-medium mt-2">
+            Grand Theft Auto: San Andreas
+          </p>
+        </div>
+      </div>
+      
+      <!-- Radio selection area -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
+        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">Choose Your Music</h2>
+
+        <a href="https://aegtam.netlify.app/indexen.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-home"></i> Home
+        </a><br>
+
+        <!-- Radio selection buttons -->
+        <div class="flex flex-col gap-3 mb-10">
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Kiss - Strutter
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Creedence Clearwater Revival - Green River
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Humble Pie - Get Down To It
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Boston - Smokin
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Tom Petty - Runnin Down A Dream
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Joe Cocker - Woman To Woman
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Eddie Money - Two Tickets To Paradise
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Billy Idol - White Wedding
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> The Who - Eminence Front
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Heart - Barracuda
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> David Bowie - Somebody Up There Likes Me
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Foghat - Slow Ride
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Toto - Hold The Line
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Grand Funk Railroad - Some Kind Of Wonderful
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> America - A Horse With No Name
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Rod Stewart - Young Turks
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Lynyrd Skynyrd - Free Bird
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Click to play</span>
+          </div>
+        </div>
+
+        <div class="my-6 flex items-center justify-center">
+          <p class="text-gray-400 text-center">Not your language?</p>
+        </div>
+
+        <!-- Language selection buttons -->
+        <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
+          <a href="kdst.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 中文
+          </a>
+          <a href="kdstfr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Français
+          </a>
+          <a href="kdstru.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Русский
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="mt-20 text-gray-400 text-sm opacity-0 translate-y-10 transition-all duration-1000 ease-out" style="transition-delay: 300ms;" id="footer">
+      <p>© 2023 Rockstar Games | All Rights Reserved</p>
+    </footer>
+  </div>
+
+  <script>
+    // Execute when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Element references
+      const content = document.getElementById('content');
+      const footer = document.getElementById('footer');
+      const playerContainer = document.getElementById('playerContainer');
+      const headphoneIcon = document.getElementById('headphoneIcon');
+      const nowPlaying = document.getElementById('nowPlaying');
+      const currentSong = document.getElementById('currentSong');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playPauseButton = document.getElementById('playPauseButton');
+      const loopButton = document.getElementById('loopButton');
+      const playerSongTitle = document.getElementById('playerSongTitle');
+      const playerArtist = document.getElementById('playerArtist');
+      const playerCover = document.getElementById('playerCover');
+      const notification = document.getElementById('notification');
+      const progressFill = document.getElementById('progress-fill');
+      const progressThumb = document.getElementById('progress-thumb');
+      const progressTrack = document.querySelector('.progress-track');
+      const currentTimeEl = document.getElementById('current-time');
+      const totalTimeEl = document.getElementById('total-time');
+      const closePlayer = document.getElementById('closePlayer');
+      const noSongOverlay = document.getElementById('noSongOverlay');
+      const playerContent = document.getElementById('playerContent');
+      
+      // Verify close button is correctly referenced
+      console.log('Close button element:', closePlayer);
+      
+      // Song data
+      const songs = {
+        'Kiss - Strutter': {
+          title: 'Strutter',
+          artist: 'Kiss',
+          file: '01-Kiss - Strutter.mp3',
+          cover: 'A.jpg'
+        },
+        'Creedence Clearwater Revival - Green River': {
+          title: 'Green River',
+          artist: 'Creedence Clearwater Revival',
+          file: '02-Creedence Clearwater Revival - Green River.mp3',
+          cover: 'A.jpg'
+        },
+        'Humble Pie - Get Down To It': {
+          title: 'Get Down To It',
+          artist: 'Humble Pie',
+          file: '03-Humble Pie - Get Down To It.mp3',
+          cover: 'A.jpg'
+        },
+        'Boston - Smokin': {
+          title: 'Smokin',
+          artist: 'Boston',
+          file: '04-Boston - Smokin.mp3',
+          cover: 'A.jpg'
+        },
+        'Tom Petty - Runnin Down A Dream': {
+          title: 'Runnin Down A Dream',
+          artist: 'Tom Petty',
+          file: '05-Tom Petty - Runnin Down A Dream.mp3',
+          cover: 'A.jpg'
+        },
+        'Joe Cocker - Woman To Woman': {
+          title: 'Woman To Woman',
+          artist: 'Joe Cocker',
+          file: '06-Joe Cocker - Woman To Woman.mp3',
+          cover: 'A.jpg'
+        },
+        'Eddie Money - Two Tickets To Paradise': {
+          title: 'Two Tickets To Paradise',
+          artist: 'Eddie Money',
+          file: '07-Eddie Money - Two Tickets To Paradise.mp3',
+          cover: 'A.jpg'
+        },
+        'Billy Idol - White Wedding': {
+          title: 'White Wedding',
+          artist: 'Billy Idol',
+          file: '08-Billy Idol - White Wedding.mp3',
+          cover: 'A.jpg'
+        },
+        'The Who - Eminence Front': {
+          title: 'Eminence Front',
+          artist: 'The Who',
+          file: '09-The Who - Eminence Front.mp3',
+          cover: 'A.jpg'
+        },
+        'Heart - Barracuda': {
+          title: 'Barracuda',
+          artist: 'Heart',
+          file: '10-Heart - Barracuda.mp3',
+          cover: 'A.jpg'
+        },
+        'David Bowie - Somebody Up There Likes Me': {
+          title: 'Somebody Up There Likes Me',
+          artist: 'David Bowie',
+          file: '11-David Bowie - Somebody Up There Likes Me.mp3',
+          cover: 'A.jpg'
+        },
+        'Foghat - Slow Ride': {
+          title: 'Slow Ride',
+          artist: 'Foghat',
+          file: '12-Foghat - Slow Ride.mp3',
+          cover: 'A.jpg'
+        },
+        'Toto - Hold The Line': {
+          title: 'Hold The Line',
+          artist: 'Toto',
+          file: '13-Toto - Hold The Line.mp3',
+          cover: 'A.jpg'
+        },
+        'Grand Funk Railroad - Some Kind Of Wonderful': {
+          title: 'Some Kind Of Wonderful',
+          artist: 'Grand Funk Railroad',
+          file: '14-Grand Funk Railroad - Some Kind Of Wonderful.mp3',
+          cover: 'A.jpg'
+        },
+        'America - A Horse With No Name': {
+          title: 'A Horse With No Name',
+          artist: 'America',
+          file: '15-America - A Horse With No Name.mp3',
+          cover: 'A.jpg'
+        },
+        'Rod Stewart - Young Turks': {
+          title: 'Young Turks',
+          artist: 'Rod Stewart',
+          file: '16-Rod Stewart - Young Turks.mp3',
+          cover: 'A.jpg'
+        },
+        'Lynyrd Skynyrd - Free Bird': {
+          title: 'Free Bird',
+          artist: 'Lynyrd Skynyrd',
+          file: '17-Lynyrd Skynyrd - Free Bird.mp3',
+          cover: 'A.jpg'
+        },
+       };
+      
+      // State variables
+      let isPlayerOpen = false;
+      let isPlaying = false;
+      let currentRadio = null;
+      let isDragging = false;
+      
+      // Initialize player state
+      updatePlayerState();
+      
+      // Content entrance animation
+      setTimeout(() => {
+        content.classList.remove('opacity-0', 'translate-y-10');
+      }, 300);
+      
+      setTimeout(() => {
+        footer.classList.remove('opacity-0', 'translate-y-10');
+      }, 600);
+      
+      // Button scroll animation
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add('btn-visible');
+            }, index * 80);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      document.querySelectorAll('.btn-animate').forEach(btn => {
+        observer.observe(btn);
+      });
+      
+      // Update player state (blur/show prompt)
+      function updatePlayerState() {
+        if (currentRadio) {
+          // When a song is playing
+          noSongOverlay.classList.add('opacity-0');
+          noSongOverlay.classList.remove('opacity-100');
+          playerContent.classList.remove('player-blur');
+          setTimeout(() => {
+            noSongOverlay.classList.add('hidden');
+          }, 300);
+        } else {
+          // When no song is playing
+          noSongOverlay.classList.remove('hidden', 'opacity-0');
+          noSongOverlay.classList.add('opacity-100');
+          playerContent.classList.add('player-blur');
+        }
+      }
+      
+      // Show notification
+      function showNotification(message) {
+        notification.textContent = message;
+        notification.classList.add('opacity-100');
+        
+        setTimeout(() => {
+          notification.classList.remove('opacity-100');
+        }, 3000);
+      }
+      
+      // Toggle player visibility
+      function togglePlayer() {
+        isPlayerOpen = !isPlayerOpen;
+        
+        if (isPlayerOpen) {
+          playerContainer.classList.remove('scale-0');
+          playerContainer.classList.add('scale-100');
+        } else {
+          playerContainer.classList.remove('scale-100');
+          playerContainer.classList.add('scale-0');
+        }
+      }
+      
+      // Format time (seconds -> MM:SS)
+      const formatTime = (seconds) => {
+        if (isNaN(seconds)) return '00:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      
+      // Update progress bar
+      const updateProgress = () => {
+        if (!isDragging && !isNaN(audioPlayer.duration)) {
+          const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+          progressFill.style.width = `${percent}%`;
+          progressThumb.style.left = `${percent}%`;
+          currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+      };
+      
+      // Play selected radio
+      function playRadio(radioName) {
+        currentRadio = radioName;
+        const song = songs[radioName];
+        
+        // Update player information
+        playerSongTitle.textContent = song.title;
+        playerArtist.textContent = song.artist;
+        playerCover.src = song.cover;
+        currentSong.textContent = `${song.title} - ${song.artist}`;
+        
+        // Show now playing info
+        nowPlaying.classList.remove('hidden');
+        setTimeout(() => {
+          nowPlaying.classList.add('opacity-100');
+        }, 10);
+        
+        // Try to load audio
+        audioPlayer.src = song.file;
+        
+        // Detect audio loading errors
+        audioPlayer.onerror = function() {
+          showNotification('Audio file not found, please report to site administrator');
+          currentRadio = null;
+          currentSong.textContent = 'Choose a song below to play';
+          updatePlayerState();
+        };
+        
+        // Update total duration after metadata loads
+        audioPlayer.addEventListener('loadedmetadata', () => {
+          totalTimeEl.textContent = formatTime(audioPlayer.duration);
+        });
+        
+        // Play audio
+        audioPlayer.play().then(() => {
+          isPlaying = true;
+          playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          // Update player state
+          updatePlayerState();
+          // Ensure player is open
+          if (!isPlayerOpen) {
+            togglePlayer();
+          }
+        }).catch(error => {
+          showNotification('Playback failed, please try again');
+          console.error('Playback failed:', error);
+          currentRadio = null;
+          updatePlayerState();
+        });
+      }
+      
+      // Toggle play/pause state
+      function togglePlayPause() {
+        if (!currentRadio) return;
+        
+        if (isPlaying) {
+          audioPlayer.pause();
+          playPauseButton.innerHTML = '<i class="fa fa-play text-xl"></i>';
+        } else {
+          audioPlayer.play().then(() => {
+            playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          }).catch(error => {
+            showNotification('Playback failed, please try again');
+            console.error('Playback failed:', error);
+          });
+        }
+        isPlaying = !isPlaying;
+      }
+      
+      // Toggle loop state
+      function toggleLoop() {
+        audioPlayer.loop = !audioPlayer.loop;
+        loopButton.classList.toggle('text-primary');
+      }
+      
+      // Progress bar click to seek
+      progressTrack.addEventListener('click', (e) => {
+        if (!currentRadio) return;
+        
+        const rect = progressTrack.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        audioPlayer.currentTime = pos * audioPlayer.duration;
+        updateProgress();
+      });
+      
+      // Drag progress bar
+      progressThumb.addEventListener('mousedown', () => { 
+        if (currentRadio) isDragging = true; 
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && currentRadio) {
+          const rect = progressTrack.getBoundingClientRect();
+          let pos = (e.clientX - rect.left) / rect.width;
+          pos = Math.max(0, Math.min(pos, 1)); // Constrain between 0-1
+          
+          progressFill.style.width = `${pos * 100}%`;
+          progressThumb.style.left = `${pos * 100}%`;
+          currentTimeEl.textContent = formatTime(pos * audioPlayer.duration);
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging && currentRadio) {
+          isDragging = false;
+          const pos = parseFloat(progressFill.style.width) / 100;
+          audioPlayer.currentTime = pos * audioPlayer.duration;
+        }
+      });
+      
+      // Update progress bar as audio plays
+      audioPlayer.addEventListener('timeupdate', updateProgress);
+      
+      // Event listener - headphone icon click
+      headphoneIcon.addEventListener('click', togglePlayer);
+      
+      // Event listener - close button click (fix: ensure proper event binding)
+      if (closePlayer) {
+        closePlayer.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent event bubbling
+          togglePlayer();
+        });
+      }
+      
+      // Event listener - play/pause button click
+      playPauseButton.addEventListener('click', togglePlayPause);
+      
+      // Event listener - loop button click
+      loopButton.addEventListener('click', toggleLoop);
+      
+      // Event listener - radio button clicks
+      document.querySelectorAll('.station-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const radioName = btn.querySelector('div').textContent.trim().replace(' ', '');
+          playRadio(radioName);
+        });
+      });
+      
+      // Auto replay when audio ends (because loop is set)
+      audioPlayer.addEventListener('ended', () => {
+        if (audioPlayer.loop) {
+          audioPlayer.play();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
