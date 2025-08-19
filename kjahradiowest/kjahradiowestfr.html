@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grand Theft Auto: San Andreas - Lecteur de radio</title>
+  <!-- Intégration de ressources externes -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Configuration de Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E63946',
+            secondary: '#6B7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- Classes utilitaires et animations personnalisées -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .btn-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .btn-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .progress-thumb {
+        @apply w-4 h-4 bg-primary rounded-full absolute top-1/2 -translate-y-1/2 shadow-lg cursor-pointer transition-all duration-150 hover:scale-125;
+      }
+      .progress-track {
+        @apply h-1 bg-gray-600 rounded-full relative cursor-pointer;
+      }
+      .progress-fill {
+        @apply h-full bg-primary rounded-full transition-all duration-150;
+      }
+      .player-transition {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .player-blur {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+
+<body class="bg-black min-h-screen overflow-x-hidden">
+  <!-- Composant lecteur -->
+  <div id="playerContainer" class="fixed top-4 right-4 z-50 player-transition transform scale-0 origin-top-right">
+    <div class="bg-black/90 backdrop-blur-xl rounded-xl p-5 shadow-2xl border border-white/10 w-72 relative">
+      <!-- Bouton de fermeture - Priorité de clic assurée -->
+      <button id="closePlayer" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors z-20 w-6 h-6 flex items-center justify-center">
+        <i class="fa fa-times"></i>
+      </button>
+      
+      <!-- Overlay d'indication de lecture inactive -->
+      <div id="noSongOverlay" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl z-10">
+        <p class="text-gray-300 text-center px-4">Choisissez une chanson ci-dessous pour jouer</p>
+      </div>
+      
+      <!-- Contenu du lecteur -->
+      <div id="playerContent">
+        <!-- Image de couverture -->
+        <div class="w-full h-48 rounded-lg overflow-hidden mb-4">
+          <img id="playerCover" src="https://picsum.photos/seed/radio/400/300" alt="Couverture de l'album" class="w-full h-full object-cover">
+        </div>
+        
+        <!-- Informations sur la chanson -->
+        <h3 id="playerSongTitle" class="text-white font-bold text-lg mb-1 text-center">Titre de la chanson</h3>
+        <p id="playerArtist" class="text-gray-400 text-sm text-center mb-4">Artiste</p>
+        
+        <!-- Contrôle de la barre de progression -->
+        <div class="mb-4">
+          <div class="flex justify-between text-sm text-gray-400 mb-2">
+            <span id="current-time">00:00</span>
+            <span id="total-time">00:00</span>
+          </div>
+          
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            <div id="progress-thumb" class="progress-thumb" style="left: 0%"></div>
+          </div>
+        </div>
+        
+        <!-- Boutons de contrôle -->
+        <div class="flex justify-center items-center gap-6">
+          <button id="loopButton" class="text-gray-300 hover:text-white transition-colors">
+            <i class="fa fa-repeat text-xl"></i>
+          </button>
+          <button id="playPauseButton" class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary/80 transition-colors">
+            <i class="fa fa-play text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Icône casque et informations de lecture en cours -->
+  <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+    <div id="nowPlaying" class="hidden text-gray-400 text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-300">
+      <span id="currentSong">Choisissez une chanson ci-dessous pour jouer</span>
+    </div>
+    <button id="headphoneIcon" class="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-primary/80 transition-colors">
+      <i class="fa fa-headphones"></i>
+    </button>
+  </div>
+  
+  <!-- Élément audio -->
+  <audio id="audioPlayer" loop></audio>
+  
+  <!-- Notification -->
+  <div id="notification" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 opacity-0 transition-opacity duration-300 z-50"></div>
+  
+  <!-- Fond flou -->
+  <div class="fixed inset-0 z-0">
+    <div class="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80"></div>
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
+    <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
+      <!-- Zone de titre -->
+      <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2">
+        <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
+          <img src="B.jpg" alt="Icône" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-col">
+          <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
+            K-Jah West
+          </h1>
+          <p class="text-[clamp(1rem,2vw,1.4rem)] text-gray-300 font-medium mt-2">
+            Grand Theft Auto: San Andreas
+          </p>
+        </div>
+      </div>
+      
+      <!-- Zone de sélection de radio -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
+        <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">Choisissez votre musique</h2>
+
+        <a href="https://aegtam.netlify.app/indexfr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-home"></i> Accueil
+        </a><br>
+        <!-- Boutons de sélection de radio -->
+        <div class="flex flex-col gap-3 mb-10">
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Reggie Stepper - Drum Pan Sound
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Black Harmony - Dont Let It Go To Your Head
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Willie Williams - Armagideon Time
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> The Pliers - Bam Bam
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Toots & The Maytals - Pressure Drop
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Barrington Levy - Here I Come
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Augustus Pablo - King Tubby Meets Rockers Uptown
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Buju Banton - Batty Rider
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> I-Roy - Sidewalk Killer
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Max Romeo & The Upsetters - I Chase The Devil
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Blood Sisters - Ring My Bell
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Dennis Brown - Revolution
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Toots & The Maytals - Funky Kingston
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Shabba Ranks - Wicked Inna Bed
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Dillinger - Cocaine In My Brain
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+          <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
+            <div class="flex items-center gap-4">
+              <i class="fa fa-music text-white"></i> Black Uhuru - Great Train Robbery
+            </div>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+          </div>
+        </div>
+
+        <div class="my-6 flex items-center justify-center">
+          <p class="text-gray-400 text-center">Langue non adaptée ?</p>
+        </div>
+
+        <!-- Nouvelle zone de sélection de langue -->
+        <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
+          <a href="kjahradiowesten.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> English
+          </a>
+          <a href="kjahradiowest.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> 中文
+          </a>
+          <a href="kjahradiowestru.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Русский
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pied de page -->
+    <footer class="mt-20 text-gray-400 text-sm opacity-0 translate-y-10 transition-all duration-1000 ease-out" style="transition-delay: 300ms;" id="footer">
+      <p>© 2023 Rockstar Games | Tous droits réservés</p>
+    </footer>
+  </div>
+
+  <script>
+    // Exécution après chargement complet de la page
+    document.addEventListener('DOMContentLoaded', () => {
+      // Références aux éléments
+      const content = document.getElementById('content');
+      const footer = document.getElementById('footer');
+      const playerContainer = document.getElementById('playerContainer');
+      const headphoneIcon = document.getElementById('headphoneIcon');
+      const nowPlaying = document.getElementById('nowPlaying');
+      const currentSong = document.getElementById('currentSong');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playPauseButton = document.getElementById('playPauseButton');
+      const loopButton = document.getElementById('loopButton');
+      const playerSongTitle = document.getElementById('playerSongTitle');
+      const playerArtist = document.getElementById('playerArtist');
+      const playerCover = document.getElementById('playerCover');
+      const notification = document.getElementById('notification');
+      const progressFill = document.getElementById('progress-fill');
+      const progressThumb = document.getElementById('progress-thumb');
+      const progressTrack = document.querySelector('.progress-track');
+      const currentTimeEl = document.getElementById('current-time');
+      const totalTimeEl = document.getElementById('total-time');
+      const closePlayer = document.getElementById('closePlayer');
+      const noSongOverlay = document.getElementById('noSongOverlay');
+      const playerContent = document.getElementById('playerContent');
+      
+      // Vérification de l'acquisition correcte du bouton de fermeture
+      console.log('Élément bouton de fermeture:', closePlayer);
+      
+      // Données des chansons
+      const songs = {
+        'Reggie Stepper - Drum Pan Sound': {
+          title: 'Drum Pan Sound',
+          artist: 'Reggie Stepper',
+          file: '01-Reggie Stepper - Drum Pan Sound.mp3',
+          cover: 'A.jpg'
+        },
+        'Black Harmony - Dont Let It Go To Your Head': {
+          title: 'Dont Let It Go To Your Head',
+          artist: 'Black Harmony',
+          file: '02-Black Harmony - Dont Let It Go To Your Head.mp3',
+          cover: 'A.jpg'
+        },
+        'Willie Williams - Armagideon Time': {
+          title: 'Armagideon Time',
+          artist: 'Willie Williams',
+          file: '03-Willie Williams - Armagideon Time.mp3',
+          cover: 'A.jpg'
+        },
+        'The Pliers - Bam Bam': {
+          title: 'Bam Bam',
+          artist: 'The Pliers',
+          file: '04-The Pliers - Bam Bam.mp3',
+          cover: 'A.jpg'
+        },
+        'Toots & The Maytals - Pressure Drop': {
+          title: 'Pressure Drop',
+          artist: 'Toots & The Maytals',
+          file: '05-Toots & The Maytals - Pressure Drop.mp3',
+          cover: 'A.jpg'
+        },
+        'Barrington Levy - Here I Come': {
+          title: 'Here I Come',
+          artist: 'Barrington Levy',
+          file: '06-Barrington Levy - Here I Come.mp3',
+          cover: 'A.jpg'
+        },
+        'Augustus Pablo - King Tubby Meets Rockers Uptown': {
+          title: 'King Tubby Meets Rockers Uptown',
+          artist: 'Augustus Pablo',
+          file: '07-Augustus Pablo - King Tubby Meets Rockers Uptown.mp3',
+          cover: 'A.jpg'
+        },
+        'Buju Banton - Batty Rider': {
+          title: 'Batty Rider',
+          artist: 'Buju Bantonr',
+          file: '08-Buju Banton - Batty Rider.mp3',
+          cover: 'A.jpg'
+        },
+        'I-Roy - Sidewalk Killer': {
+          title: 'Sidewalk Killer',
+          artist: 'I-Roy',
+          file: '09-I-Roy - Sidewalk Killer.mp3',
+          cover: 'A.jpg'
+        },
+        'Max Romeo & The Upsetters - I Chase The Devil': {
+          title: 'I Chase The Devil',
+          artist: 'Max Romeo & The Upsetters',
+          file: '10-Max Romeo & The Upsetters - I Chase The Devil.mp3',
+          cover: 'A.jpg'
+        },
+        'Blood Sisters - Ring My Bell': {
+          title: 'Ring My Bell',
+          artist: 'Blood Sisters',
+          file: '11-Blood Sisters - Ring My Bell.mp3',
+          cover: 'A.jpg'
+        },
+        'Dennis Brown - Revolution': {
+          title: 'Revolution',
+          artist: 'Dennis Brown',
+          file: '12-Dennis Brown - Revolution.mp3',
+          cover: 'A.jpg'
+        },
+        'Toots & The Maytals - Funky Kingston': {
+          title: 'Funky Kingston',
+          artist: 'Toots & The Maytals',
+          file: '13-Toots & The Maytals - Funky Kingston.mp3',
+          cover: 'A.jpg'
+        },
+        'Shabba Ranks - Wicked Inna Bed': {
+          title: 'Wicked Inna Bed',
+          artist: 'Shabba Ranks',
+          file: '14-Shabba Ranks - Wicked Inna Bed.mp3',
+          cover: 'A.jpg'
+        },
+        'Dillinger - Cocaine In My Brain': {
+          title: 'Cocaine In My Brain',
+          artist: 'Dillinger',
+          file: '15-Dillinger - Cocaine In My Brain.mp3',
+          cover: 'A.jpg'
+        },
+        'Black Uhuru - Great Train Robbery': {
+          title: 'Great Train Robbery',
+          artist: 'Black Uhuru',
+          file: '16-Black Uhuru - Great Train Robbery.mp3',
+          cover: 'A.jpg'
+        },
+       };
+      
+      // Variables d'état
+      let isPlayerOpen = false;
+      let isPlaying = false;
+      let currentRadio = null;
+      let isDragging = false;
+      
+      // Initialisation de l'état du lecteur
+      updatePlayerState();
+      
+      // Animation d'entrée du contenu
+      setTimeout(() => {
+        content.classList.remove('opacity-0', 'translate-y-10');
+      }, 300);
+      
+      setTimeout(() => {
+        footer.classList.remove('opacity-0', 'translate-y-10');
+      }, 600);
+      
+      // Animation de défilement des boutons
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add('btn-visible');
+            }, index * 80);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      document.querySelectorAll('.btn-animate').forEach(btn => {
+        observer.observe(btn);
+      });
+      
+      // Mise à jour de l'état du lecteur (flou/indication)
+      function updatePlayerState() {
+        if (currentRadio) {
+          // Lorsqu'une chanson est en lecture
+          noSongOverlay.classList.add('opacity-0');
+          noSongOverlay.classList.remove('opacity-100');
+          playerContent.classList.remove('player-blur');
+          setTimeout(() => {
+            noSongOverlay.classList.add('hidden');
+          }, 300);
+        } else {
+          // Lorsqu'aucune chanson n'est en lecture
+          noSongOverlay.classList.remove('hidden', 'opacity-0');
+          noSongOverlay.classList.add('opacity-100');
+          playerContent.classList.add('player-blur');
+        }
+      }
+      
+      // Affichage de notification
+      function showNotification(message) {
+        notification.textContent = message;
+        notification.classList.add('opacity-100');
+        
+        setTimeout(() => {
+          notification.classList.remove('opacity-100');
+        }, 3000);
+      }
+      
+      // Basculement de l'affichage du lecteur
+      function togglePlayer() {
+        isPlayerOpen = !isPlayerOpen;
+        
+        if (isPlayerOpen) {
+          playerContainer.classList.remove('scale-0');
+          playerContainer.classList.add('scale-100');
+        } else {
+          playerContainer.classList.remove('scale-100');
+          playerContainer.classList.add('scale-0');
+        }
+      }
+      
+      // Formatage de la durée (secondes -> MM:SS)
+      const formatTime = (seconds) => {
+        if (isNaN(seconds)) return '00:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+      
+      // Mise à jour de la barre de progression
+      const updateProgress = () => {
+        if (!isDragging && !isNaN(audioPlayer.duration)) {
+          const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+          progressFill.style.width = `${percent}%`;
+          progressThumb.style.left = `${percent}%`;
+          currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+      };
+      
+      // Lecture d'une radio spécifique
+      function playRadio(radioName) {
+        currentRadio = radioName;
+        const song = songs[radioName];
+        
+        // Mise à jour des informations du lecteur
+        playerSongTitle.textContent = song.title;
+        playerArtist.textContent = song.artist;
+        playerCover.src = song.cover;
+        currentSong.textContent = `${song.title} - ${song.artist}`;
+        
+        // Affichage des informations de lecture en cours
+        nowPlaying.classList.remove('hidden');
+        setTimeout(() => {
+          nowPlaying.classList.add('opacity-100');
+        }, 10);
+        
+        // Tentative de chargement de l'audio
+        audioPlayer.src = song.file;
+        
+        // Détection des erreurs de chargement
+        audioPlayer.onerror = function() {
+          showNotification('Fichier introuvable, veuillez signaler au webmaster');
+          currentRadio = null;
+          currentSong.textContent = 'Choisissez une chanson ci-dessous pour jouer';
+          updatePlayerState();
+        };
+        
+        // Mise à jour de la durée totale après chargement des métadonnées
+        audioPlayer.addEventListener('loadedmetadata', () => {
+          totalTimeEl.textContent = formatTime(audioPlayer.duration);
+        });
+        
+        // Lecture de l'audio
+        audioPlayer.play().then(() => {
+          isPlaying = true;
+          playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          // Mise à jour de l'état du lecteur
+          updatePlayerState();
+          // Assurance que le lecteur est ouvert
+          if (!isPlayerOpen) {
+            togglePlayer();
+          }
+        }).catch(error => {
+          showNotification('Échec de la lecture, veuillez réessayer');
+          console.error('Échec de la lecture:', error);
+          currentRadio = null;
+          updatePlayerState();
+        });
+      }
+      
+      // Basculement de l'état lecture/pause
+      function togglePlayPause() {
+        if (!currentRadio) return;
+        
+        if (isPlaying) {
+          audioPlayer.pause();
+          playPauseButton.innerHTML = '<i class="fa fa-play text-xl"></i>';
+        } else {
+          audioPlayer.play().then(() => {
+            playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
+          }).catch(error => {
+            showNotification('Échec de la lecture, veuillez réessayer');
+            console.error('Échec de la lecture:', error);
+          });
+        }
+        isPlaying = !isPlaying;
+      }
+      
+      // Basculement de l'état de boucle
+      function toggleLoop() {
+        audioPlayer.loop = !audioPlayer.loop;
+        loopButton.classList.toggle('text-primary');
+      }
+      
+      // Clic sur la barre de progression pour sauter
+      progressTrack.addEventListener('click', (e) => {
+        if (!currentRadio) return;
+        
+        const rect = progressTrack.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        audioPlayer.currentTime = pos * audioPlayer.duration;
+        updateProgress();
+      });
+      
+      // Glisser la barre de progression
+      progressThumb.addEventListener('mousedown', () => { 
+        if (currentRadio) isDragging = true; 
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging && currentRadio) {
+          const rect = progressTrack.getBoundingClientRect();
+          let pos = (e.clientX - rect.left) / rect.width;
+          pos = Math.max(0, Math.min(pos, 1)); // Limitation entre 0 et 1
+          
+          progressFill.style.width = `${pos * 100}%`;
+          progressThumb.style.left = `${pos * 100}%`;
+          currentTimeEl.textContent = formatTime(pos * audioPlayer.duration);
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        if (isDragging && currentRadio) {
+          isDragging = false;
+          const pos = parseFloat(progressFill.style.width) / 100;
+          audioPlayer.currentTime = pos * audioPlayer.duration;
+        }
+      });
+      
+      // Mise à jour de la barre de progression lors du défilement
+      audioPlayer.addEventListener('timeupdate', updateProgress);
+      
+      // Écouteur d'événement - Clic sur l'icône casque
+      headphoneIcon.addEventListener('click', togglePlayer);
+      
+      // Écouteur d'événement - Clic sur le bouton de fermeture (correction : assure la liaison correcte)
+      if (closePlayer) {
+        closePlayer.addEventListener('click', (e) => {
+          e.stopPropagation(); // Empêche la propagation de l'événement
+          togglePlayer();
+        });
+      }
+      
+      // Écouteur d'événement - Clic sur le bouton lecture/pause
+      playPauseButton.addEventListener('click', togglePlayPause);
+      
+      // Écouteur d'événement - Clic sur le bouton boucle
+      loopButton.addEventListener('click', toggleLoop);
+      
+      // Écouteur d'événement - Clic sur les boutons de radio
+      document.querySelectorAll('.station-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const radioName = btn.querySelector('div').textContent.trim().replace(' ', '');
+          playRadio(radioName);
+        });
+      });
+      
+      // Relecture automatique à la fin de l'audio (grâce à l'attribut loop)
+      audioPlayer.addEventListener('ended', () => {
+        if (audioPlayer.loop) {
+          audioPlayer.play();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
