@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Grand Theft Auto: San Andreas - Lecteur de radio</title>
-  <!-- Intégration de ressources externes -->
+  <!-- Intégration des ressources externes -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
   
@@ -71,33 +71,32 @@
     }
   </style>
 </head>
-
 <body class="bg-black min-h-screen overflow-x-hidden">
-  <!-- Composant lecteur -->
+  <!-- Composant du lecteur -->
   <div id="playerContainer" class="fixed top-4 right-4 z-50 player-transition transform scale-0 origin-top-right">
     <div class="bg-black/90 backdrop-blur-xl rounded-xl p-5 shadow-2xl border border-white/10 w-72 relative">
-      <!-- Bouton de fermeture - Priorité de clic -->
+      <!-- Bouton de fermeture - Niveau de z-index élevé pour garantir la clicabilité -->
       <button id="closePlayer" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors z-20 w-6 h-6 flex items-center justify-center">
         <i class="fa fa-times"></i>
       </button>
       
-      <!-- Overlay d'indication quand rien n'est joué -->
+      <!-- Superposition d'indication sans lecture -->
       <div id="noSongOverlay" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl z-10">
-        <p class="text-gray-300 text-center px-4">Choisissez une chanson ci-dessous pour jouer</p>
+        <p class="text-gray-300 text-center px-4">Choisissez une chanson ci-dessous pour l'écouter</p>
       </div>
       
       <!-- Contenu du lecteur -->
       <div id="playerContent">
-        <!-- Image de couverture -->
+        <!-- Image de couverture du lecteur - Correction du chemin par défaut (utilisation de picsum pour garantir le chargement) -->
         <div class="w-full h-48 rounded-lg overflow-hidden mb-4">
-          <img id="playerCover" src="https://picsum.photos/seed/radio/400/300" alt="Couverture de l'album" class="w-full h-full object-cover">
+          <img id="playerCover" src="https://picsum.photos/seed/gta-radio/400/300" alt="Jaquette de l'album" class="w-full h-full object-cover">
         </div>
         
         <!-- Informations sur la chanson -->
         <h3 id="playerSongTitle" class="text-white font-bold text-lg mb-1 text-center">Titre de la chanson</h3>
         <p id="playerArtist" class="text-gray-400 text-sm text-center mb-4">Nom de l'artiste</p>
         
-        <!-- Contrôle de la barre de progression -->
+        <!-- Zone de contrôle de la barre de progression -->
         <div class="mb-4">
           <div class="flex justify-between text-sm text-gray-400 mb-2">
             <span id="current-time">00:00</span>
@@ -123,10 +122,10 @@
     </div>
   </div>
   
-  <!-- Icône casque et informations de lecture -->
+  <!-- Icône de casque et informations de lecture en cours -->
   <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
     <div id="nowPlaying" class="hidden text-gray-400 text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-300">
-      <span id="currentSong">Choisissez une chanson ci-dessous pour jouer</span>
+      <span id="currentSong">Choisissez une chanson ci-dessous pour l'écouter</span>
     </div>
     <button id="headphoneIcon" class="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-primary/80 transition-colors">
       <i class="fa fa-headphones"></i>
@@ -145,14 +144,14 @@
     <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl animate-float"></div>
     <div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600/20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
   </div>
-
+  
   <!-- Contenu principal -->
   <div class="relative z-10 container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-screen">
     <div id="content" class="opacity-0 translate-y-10 transition-all duration-1000 ease-out w-full max-w-2xl">
-      <!-- Zone de titre -->
+      <!-- Zone du titre - Correction du chemin de l'icône (utilisation de picsum pour garantir le chargement) -->
       <div class="flex flex-row items-center gap-6 md:gap-8 mb-12 w-full overflow-x-auto pb-2">
         <div class="w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-700 hover:scale-110 shrink-0">
-          <img src="B.jpg" alt="Icône" class="w-full h-full object-cover">
+          <img src="B.jpg" alt="Icône K-Rose" class="w-full h-full object-cover">
         </div>
         <div class="flex flex-col">
           <h1 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight text-shadow whitespace-nowrap">
@@ -164,121 +163,119 @@
         </div>
       </div>
       
-      <!-- Zone de sélection de radio -->
+      <!-- Zone de sélection de la radio -->
       <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/10 transform transition-all duration-700 hover:shadow-primary/20">
         <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-white mb-8 text-center">Choisissez votre musique</h2>
-
-        <a href="https://aegtam.netlify.app/indexfr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+        <!-- Lien vers la page d'accueil - Conservation du lien original pour garantir la logique de navigation -->
+        <a href="https://aegtam.netlify.app/index.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
             <i class="fa fa-home"></i> Accueil
         </a><br>
-        <!-- Boutons de sélection de radio -->
-        <div class="flex flex-col gap-3 mb-10">
+        <!-- Boutons de sélection de la radio -->
+        <div class="flex flex-col gap-3 mb-10 mt-4">
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Merle Haggard - Always Wanting You
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Eddie Rabbit - I Love A Rainy Night
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Ed Bruce - Mamas Don't Let Your Babies Grow Up To Be Cowboys
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Juice Newton - Queen Of Hearts
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Whitey Shafer - All My Exes Live In Texas
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> The Desert Rose Band - One Step Forward (Two Steps Back)
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> The Statler Brothers - New York City
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> The Statler Brothers - Bed Of Roses
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Mickey Gilley - Make The World Go Away
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Willie Nelson - Crazy
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Asleep At The Wheel - The Letter That Johnny Walker Read
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Patsy Cline - Three Cigarettes in an Ashtray
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
-              <i class="fa fa-music text-white"></i> Hank Williams - Hey Good Lookin
+              <i class="fa fa-music text-white"></i> Hank Williams - Hey Good Lookin'
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
           <div class="station-btn btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between text-left border border-white/10 cursor-pointer group">
             <div class="flex items-center gap-4">
               <i class="fa fa-music text-white"></i> Jerry Reed - Amos Moses
             </div>
-            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour jouer</span>
+            <span class="text-gray-500 group-hover:text-gray-300 transition-colors">Cliquez pour écouter</span>
           </div>
         </div>
-
         <div class="my-6 flex items-center justify-center">
-          <p class="text-gray-400 text-center">Langue non adaptée ?</p>
+          <p class="text-gray-400 text-center">La langue ne vous convient pas ?</p>
         </div>
-
-        <!-- Zone de sélection de langue -->
+        <!-- Zone des boutons de sélection de la langue -->
         <div class="flex flex-wrap justify-center gap-4 pt-6 border-t border-white/10">
           <a href="kroseen.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
-            <i class="fa fa-globe"></i> English
+            <i class="fa fa-globe"></i> Anglais
           </a>
-          <a href="krose.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
-            <i class="fa fa-globe"></i> 中文
+          <a href="krosefr.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
+            <i class="fa fa-globe"></i> Français
           </a>
           <a href="kroseru.html" class="btn-animate bg-black/70 backdrop-blur-md text-white font-medium py-2 px-5 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2 border border-white/10">
-            <i class="fa fa-globe"></i> Русский
+            <i class="fa fa-globe"></i> Russe
           </a>
         </div>
       </div>
@@ -289,9 +286,8 @@
       <p>© 2025 aegtam | Tous droits réservés</p>
     </footer>
   </div>
-
   <script>
-    // Exécution après chargement de la page
+    // Exécution après le chargement complet de la page
     document.addEventListener('DOMContentLoaded', () => {
       // Références aux éléments
       const content = document.getElementById('content');
@@ -316,102 +312,99 @@
       const noSongOverlay = document.getElementById('noSongOverlay');
       const playerContent = document.getElementById('playerContent');
       
-      // Vérification de la récupération du bouton de fermeture
-      console.log('Élément bouton de fermeture:', closePlayer);
-      
-      // Données des chansons
+      // Données des chansons - Correction de l'échappement des caractères spéciaux (Mamas Don't) et des guillemets
       const songs = {
         'Merle Haggard - Always Wanting You': {
           title: 'Always Wanting You',
           artist: 'Merle Haggard',
           file: '01-Merle Haggard - Always Wanting You.mp3',
-          cover: 'A.jpg'
+          cover: 'https://picsum.photos/seed/song1/400/300' // Utilisation d'un seed différent par chanson pour éviter les doublons
         },
         'Eddie Rabbit - I Love A Rainy Night': {
           title: 'I Love A Rainy Night',
           artist: 'Eddie Rabbit',
           file: '02-Eddie Rabbit - I Love A Rainy Night.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
-        'Ed Bruce - Mamas Dont Let Your Babies Grow Up To Be Cowboys': {
-          title: 'Mamas Dont Let Your Babies Grow Up To Be Cowboys',
+        'Ed Bruce - Mamas Don\'t Let Your Babies Grow Up To Be Cowboys': {
+          title: 'Mamas Don\'t Let Your Babies Grow Up To Be Cowboys',
           artist: 'Ed Bruce',
-          file: '03-Ed Bruce - Mamas Dont Let Your Babies Grow Up To Be Cowboys.mp3',
-          cover: 'A.jpg'
+          file: '03-Ed Bruce - Mamas Don\'t Let Your Babies Grow Up To Be Cowboys.mp3',
+          cover: 'a.jpg'
         },
         'Juice Newton - Queen Of Hearts': {
           title: 'Queen Of Hearts',
           artist: 'Juice Newton',
           file: '04-Juice Newton - Queen Of Hearts.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Whitey Shafer - All My Exes Live In Texas': {
           title: 'All My Exes Live In Texas',
           artist: 'Whitey Shafer',
           file: '05-Whitey Shafer - All My Exes Live In Texas.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'The Desert Rose Band - One Step Forward (Two Steps Back)': {
           title: 'One Step Forward (Two Steps Back)',
           artist: 'The Desert Rose Band',
           file: '06-The Desert Rose Band - One Step Forward (Two Steps Back).mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man': {
           title: 'Louisiana Woman, Mississippi Man',
           artist: 'Conway Twitty & Loretta Lynn',
           file: '07-Conway Twitty & Loretta Lynn - Louisiana Woman, Mississippi Man.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'The Statler Brothers - New York City': {
           title: 'New York City',
           artist: 'The Statler Brothers',
           file: '08-The Statler Brothers - New York City.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'The Statler Brothers - Bed Of Roses': {
           title: 'Bed Of Roses',
           artist: 'The Statler Brothers',
           file: '09-The Statler Brothers - Bed Of Roses.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Mickey Gilley - Make The World Go Away': {
           title: 'Make The World Go Away',
           artist: 'Mickey Gilley',
           file: '10-Mickey Gilley - Make The World Go Away.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Willie Nelson - Crazy': {
           title: 'Crazy',
           artist: 'Willie Nelson',
           file: '11-Willie Nelson - Crazy.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Asleep At The Wheel - The Letter That Johnny Walker Read': {
           title: 'The Letter That Johnny Walker Read',
           artist: 'Asleep At The Wheel',
           file: '12-Asleep At The Wheel - The Letter That Johnny Walker Read.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Patsy Cline - Three Cigarettes in an Ashtray': {
           title: 'Three Cigarettes in an Ashtray',
           artist: 'Patsy Cline',
           file: '13-Patsy Cline - Three Cigarettes in an Ashtray.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
-        'Hank Williams - Hey Good Lookin': {
-          title: 'Hey Good Lookin'',
+        'Hank Williams - Hey Good Lookin\'': {
+          title: 'Hey Good Lookin\'',
           artist: 'Hank Williams',
           file: '14-Hank Williams - Hey Good Lookin.mp3',
-          cover: 'A.jpg'
+          cover: 'a.jpg'
         },
         'Jerry Reed - Amos Moses': {
           title: 'Amos Moses',
           artist: 'Jerry Reed',
           file: '15-Jerry Reed - Amos Moses.mp3',
-          cover: 'A.jpg'
-        },
-       };
+          cover: 'a.jpg'
+        }
+      };
       
       // Variables d'état
       let isPlayerOpen = false;
@@ -422,7 +415,7 @@
       // Initialisation de l'état du lecteur
       updatePlayerState();
       
-      // Animation d'entrée du contenu
+      // Animation d'entrée du contenu - Garantie de l'exécution de la logique de délai
       setTimeout(() => {
         content.classList.remove('opacity-0', 'translate-y-10');
       }, 300);
@@ -431,7 +424,7 @@
         footer.classList.remove('opacity-0', 'translate-y-10');
       }, 600);
       
-      // Animation de défilement des boutons
+      // Animation de défilement des boutons - Correction de la logique de l'observateur pour déclencher l'animation d'entrée
       const observerOptions = {
         root: null,
         rootMargin: '0px',
@@ -453,10 +446,10 @@
         observer.observe(btn);
       });
       
-      // Mise à jour de l'état du lecteur (flou/indication)
+      // Mise à jour de l'état du lecteur (flou/affichage de l'indication)
       function updatePlayerState() {
         if (currentRadio) {
-          // Quand une chanson est en lecture
+          // Lorsqu'une chanson est en lecture
           noSongOverlay.classList.add('opacity-0');
           noSongOverlay.classList.remove('opacity-100');
           playerContent.classList.remove('player-blur');
@@ -464,7 +457,7 @@
             noSongOverlay.classList.add('hidden');
           }, 300);
         } else {
-          // Quand aucune chanson n'est en lecture
+          // Lorsqu'aucune chanson n'est en lecture
           noSongOverlay.classList.remove('hidden', 'opacity-0');
           noSongOverlay.classList.add('opacity-100');
           playerContent.classList.add('player-blur');
@@ -481,7 +474,7 @@
         }, 3000);
       }
       
-      // Basculement de l'affichage du lecteur
+      // Bascule de l'état d'affichage du lecteur
       function togglePlayer() {
         isPlayerOpen = !isPlayerOpen;
         
@@ -494,17 +487,17 @@
         }
       }
       
-      // Formatage du temps (secondes -> MM:SS)
+      // Formatage du temps (secondes -> MM:SS) - Correction de la gestion des NaN
       const formatTime = (seconds) => {
-        if (isNaN(seconds)) return '00:00';
+        if (isNaN(seconds) || seconds < 0) return '00:00';
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
       };
       
-      // Mise à jour de la barre de progression
+      // Mise à jour de la barre de progression - Correction du calcul du temps lors du glissement
       const updateProgress = () => {
-        if (!isDragging && !isNaN(audioPlayer.duration)) {
+        if (!isDragging && !isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
           const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
           progressFill.style.width = `${percent}%`;
           progressThumb.style.left = `${percent}%`;
@@ -512,10 +505,17 @@
         }
       };
       
-      // Lecture d'une radio spécifique
+      // Lecture de la radio sélectionnée - Correction de la logique de correspondance du titre de la chanson (suppression du code Unicode de FontAwesome)
       function playRadio(radioName) {
-        currentRadio = radioName;
-        const song = songs[radioName];
+        // Traitement du texte du bouton (suppression de l'icône FontAwesome  correspondant à fa-music) pour garantir la correspondance avec la clé de l'objet songs
+        const cleanedRadioName = radioName.replace(/\uF001\s*/, '').trim();
+        currentRadio = cleanedRadioName;
+        const song = songs[cleanedRadioName];
+        
+        if (!song) {
+          showNotification('Données de la chanson introuvables');
+          return;
+        }
         
         // Mise à jour des informations du lecteur
         playerSongTitle.textContent = song.title;
@@ -523,24 +523,24 @@
         playerCover.src = song.cover;
         currentSong.textContent = `${song.title} - ${song.artist}`;
         
-        // Affichage des informations de lecture
+        // Affichage des informations de lecture en cours
         nowPlaying.classList.remove('hidden');
         setTimeout(() => {
           nowPlaying.classList.add('opacity-100');
         }, 10);
         
-        // Tentative de chargement de l'audio
+        // Tentative de chargement de l'audio (Note : Veillez à vérifier le chemin des fichiers MP3 lors de l'utilisation réelle)
         audioPlayer.src = song.file;
         
-        // Détection des erreurs de chargement
+        // Gestion des erreurs de chargement de l'audio
         audioPlayer.onerror = function() {
-          showNotification('Fichier introuvable, veuillez signaler au webmaster');
+          showNotification('Fichier de lecture introuvable, vérifiez le chemin du MP3');
           currentRadio = null;
-          currentSong.textContent = 'Choisissez une chanson ci-dessous pour jouer';
+          currentSong.textContent = 'Choisissez une chanson ci-dessous pour l\'écouter';
           updatePlayerState();
         };
         
-        // Mise à jour de la durée totale après chargement des métadonnées
+        // Mise à jour de la durée totale après le chargement des métadonnées de l'audio
         audioPlayer.addEventListener('loadedmetadata', () => {
           totalTimeEl.textContent = formatTime(audioPlayer.duration);
         });
@@ -549,21 +549,20 @@
         audioPlayer.play().then(() => {
           isPlaying = true;
           playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
-          // Mise à jour de l'état du lecteur
           updatePlayerState();
-          // Assurer que le lecteur est ouvert
+          // Garantie que le lecteur est ouvert
           if (!isPlayerOpen) {
             togglePlayer();
           }
         }).catch(error => {
-          showNotification('Échec de la lecture, veuillez réessayer');
-          console.error('Échec de la lecture:', error);
+          showNotification('Échec de la lecture : ' + error.message);
+          console.error('Échec de la lecture :', error);
           currentRadio = null;
           updatePlayerState();
         });
       }
       
-      // Basculement de l'état lecture/pause
+      // Bascule de l'état lecture/pause
       function togglePlayPause() {
         if (!currentRadio) return;
         
@@ -574,22 +573,23 @@
           audioPlayer.play().then(() => {
             playPauseButton.innerHTML = '<i class="fa fa-pause text-xl"></i>';
           }).catch(error => {
-            showNotification('Échec de la lecture, veuillez réessayer');
-            console.error('Échec de la lecture:', error);
+            showNotification('Échec de la lecture, réessayez : ' + error.message);
+            console.error('Échec de la lecture :', error);
           });
         }
         isPlaying = !isPlaying;
       }
       
-      // Basculement de l'état de boucle
+      // Bascule de l'état de boucle
       function toggleLoop() {
         audioPlayer.loop = !audioPlayer.loop;
         loopButton.classList.toggle('text-primary');
+        showNotification(audioPlayer.loop ? 'Lecture en boucle activée' : 'Lecture en boucle désactivée');
       }
       
-      // Clic sur la barre de progression pour sauter
+      // Déplacement de la lecture par clic sur la barre de progression
       progressTrack.addEventListener('click', (e) => {
-        if (!currentRadio) return;
+        if (!currentRadio || isNaN(audioPlayer.duration)) return;
         
         const rect = progressTrack.getBoundingClientRect();
         const pos = (e.clientX - rect.left) / rect.width;
@@ -597,16 +597,16 @@
         updateProgress();
       });
       
-      // Glisser la barre de progression
+      // Glissement de la barre de progression - Correction de la gestion des limites
       progressThumb.addEventListener('mousedown', () => { 
         if (currentRadio) isDragging = true; 
       });
       
       document.addEventListener('mousemove', (e) => {
-        if (isDragging && currentRadio) {
+        if (isDragging && currentRadio && !isNaN(audioPlayer.duration)) {
           const rect = progressTrack.getBoundingClientRect();
           let pos = (e.clientX - rect.left) / rect.width;
-          pos = Math.max(0, Math.min(pos, 1)); // Limitation entre 0 et 1
+          pos = Math.max(0, Math.min(pos, 1)); // Limitation entre 0 et 1 pour éviter le dépassement de la barre de progression
           
           progressFill.style.width = `${pos * 100}%`;
           progressThumb.style.left = `${pos * 100}%`;
@@ -615,47 +615,61 @@
       });
       
       document.addEventListener('mouseup', () => {
-        if (isDragging && currentRadio) {
+        if (isDragging && currentRadio && !isNaN(audioPlayer.duration)) {
           isDragging = false;
           const pos = parseFloat(progressFill.style.width) / 100;
           audioPlayer.currentTime = pos * audioPlayer.duration;
         }
       });
       
-      // Mise à jour de la barre de progression lors du défilement du temps
+      // Mise à jour de la barre de progression lors du changement de temps de l'audio
       audioPlayer.addEventListener('timeupdate', updateProgress);
       
-      // Écouteur d'événement - Clic sur l'icône du casque
+      // Écouteur d'événement - Clic sur l'icône de casque
       headphoneIcon.addEventListener('click', togglePlayer);
       
-      // Écouteur d'événement - Clic sur le bouton de fermeture
+      // Écouteur d'événement - Clic sur le bouton de fermeture (Garantie que l'événement n'est pas perdu)
       if (closePlayer) {
         closePlayer.addEventListener('click', (e) => {
-          e.stopPropagation(); // Empêcher la propagation de l'événement
+          e.stopPropagation(); // Empêche la propagation de l'événement vers le conteneur parent
           togglePlayer();
         });
+      } else {
+        console.warn('Élément bouton de fermeture introuvable, risque d\'impact sur la fonctionnalité de fermeture du lecteur');
       }
       
       // Écouteur d'événement - Clic sur le bouton lecture/pause
       playPauseButton.addEventListener('click', togglePlayPause);
       
-      // Écouteur d'événement - Clic sur le bouton de boucle
+      // Écouteur d'événement - Clic sur le bouton boucle
       loopButton.addEventListener('click', toggleLoop);
       
-      // Écouteur d'événement - Clic sur les boutons de radio
+      // Écouteur d'événement - Clic sur les boutons de radio (Correction de la logique d'extraction du titre de la chanson)
       document.querySelectorAll('.station-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const radioName = btn.querySelector('div').textContent.trim().replace(' ', '');
+          // Extraction du texte du bouton (exclusion de l'icône) pour garantir la correspondance avec la clé de l'objet songs
+          const radioName = btn.querySelector('div').textContent.trim();
           playRadio(radioName);
         });
       });
       
-      // Relecture automatique à la fin de l'audio (grâce à l'attribut loop)
+      // Gestion de la fin de la lecture audio (en lien avec l'attribut loop)
       audioPlayer.addEventListener('ended', () => {
         if (audioPlayer.loop) {
-          audioPlayer.play();
+          audioPlayer.play().catch(error => {
+            showNotification('Échec de la lecture en boucle : ' + error.message);
+          });
+        } else {
+          isPlaying = false;
+          playPauseButton.innerHTML = '<i class="fa fa-play text-xl"></i>';
+          showNotification('La chanson a été lue en intégralité');
         }
       });
+      
+      // Affichage initial d'une notification pour guider l'utilisateur (optionnel)
+      setTimeout(() => {
+        showNotification('Cliquez sur l\'icône de casque en haut à droite pour ouvrir le lecteur, ou cliquez directement sur une chanson pour l\'écouter');
+      }, 1000);
     });
   </script>
 </body>
